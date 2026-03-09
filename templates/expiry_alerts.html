@@ -1,0 +1,111 @@
+{% extends 'base.html' %} 
+{% block title %}Expiry Alerts - MediStore Pro{% endblock %} 
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="page-title">Inventory Expiry Alerts</h1>
+    <p class="page-subtitle">Manage medicines nearing their shelf-life limit (within 50 days).</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="stat-card border-l-4 border-warning">
+        <div class="stat-label text-warning">Expiring Soon</div>
+        <div class="stat-value">{{ expiring_soon|length }} Items</div>
+        <p class="text-small mt-1">Action required within 50 days.</p>
+    </div>
+    <div class="stat-card border-l-4 border-danger">
+        <div class="stat-label text-danger">Expired</div>
+        <div class="stat-value">{{ expired_items|length }} Items</div>
+        <p class="text-small mt-1">Remove these from active stock immediately.</p>
+    </div>
+</div>
+
+<div class="card mb-8">
+    <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <h2 class="section-header text-warning">
+            <i class="fas fa-hourglass-half mr-2"></i>Expiring Within 50 Days
+        </h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Medicine Name</th>
+                    <th>Batch</th>
+                    <th>Shelf</th>
+                    <th>Stock</th>
+                    <th>Expiry Date</th>
+                    <th>Days Left</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in expiring_soon %}
+                <tr>
+                    <td class="font-medium">{{ item.name }}</td>
+                    <td><span class="text-xs bg-gray-100 px-2 py-1 rounded">{{ item.batch_number or 'N/A' }}</span></td>
+                    <td>{{ item.shelf_location }}</td>
+                    <td>{{ item.stock_quantity }}</td>
+                    <td class="text-warning font-semibold">{{ item.expiry_date }}</td>
+                    <td>
+                        <span class="badge {% if item.days_left < 15 %}badge-danger{% else %}badge-warning{% endif %}">
+                            {{ item.days_left }} days
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('view_product', product_id=item.id) }}" class="text-primary hover:underline text-sm">View</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-8 text-gray-500">No medicines expiring in the next 50 days.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if expired_items %}
+<div class="card">
+    <div class="bg-red-50 px-6 py-4 border-b border-red-100">
+        <h2 class="section-header text-danger">
+            <i class="fas fa-skull-crossbones mr-2"></i>Expired Inventory (Must Remove)
+        </h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead class="bg-red-50">
+                <tr>
+                    <th>Medicine Name</th>
+                    <th>Batch</th>
+                    <th>Stock Remaining</th>
+                    <th>Expired On</th>
+                    <th>Days Past</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in expired_items %}
+                <tr class="bg-red-50/30">
+                    <td class="font-medium text-danger">{{ item.name }}</td>
+                    <td>{{ item.batch_number }}</td>
+                    <td>{{ item.stock_quantity }}</td>
+                    <td>{{ item.expiry_date }}</td>
+                    <td><span class="text-danger font-bold">{{ item.days_past }} days ago</span></td>
+                    <td>
+                        <form action="{{ url_for('delete_product', product_id=item.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this expired product?');">
+                            <button type="submit" class="text-danger hover:text-red-700">
+                                <i class="fas fa-trash"></i> Dispose
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

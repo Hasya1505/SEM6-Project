@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Procurement Intelligence - {{ supplier.name }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Exact style block from your uploaded file */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    * { font-family: 'Inter', sans-serif; }
+
+    :root {
+        --primary: #2563eb;
+        --border: #e2e8f0;
+        --bg: #f8fafc;
+    }
+
+    /* Ensuring all form elements inherit the font */
+    input, select, textarea, button {
+        font-family: 'Inter', sans-serif !important;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border);
+    }
+
+    .stat-card-gradient {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .stat-card-gradient:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+        height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 10px;
+    }
+</style>
+
+<div class="max-w-7xl mx-auto space-y-8 py-8 px-4 sm:px-6">
+    
+    <nav class="flex items-center space-x-2 text-sm font-medium text-slate-400">
+        <a href="{{ url_for('suppliers') }}" class="hover:text-indigo-600 transition-colors flex items-center">
+            <i class="fas fa-truck-loading mr-2"></i> Suppliers
+        </a>
+        <i class="fas fa-chevron-right text-[10px]"></i>
+        <span class="text-slate-900 bg-slate-100 px-3 py-1 rounded-full">{{ supplier.name }}</span>
+    </nav>
+
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm glass-card">
+        <div class="space-y-3">
+            <div class="inline-flex items-center px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold tracking-wider uppercase">
+                Verified Logistics Partner
+            </div>
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">{{ supplier.name }}</h1>
+            <div class="flex flex-wrap gap-6 mt-4">
+                <div class="flex items-center text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center mr-3">
+                        <i class="fas fa-id-card text-indigo-600 text-sm"></i>
+                    </div>
+                    <span class="text-sm font-semibold tracking-tight">GST: {{ supplier.gstin }}</span>
+                </div>
+                <div class="flex items-center text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center mr-3">
+                        <i class="fas fa-phone text-emerald-600 text-sm"></i>
+                    </div>
+                    <span class="text-sm font-semibold">+91 {{ supplier.phone }}</span>
+                </div>
+            </div>
+        </div>
+        <button onclick="document.getElementById('addOrderModal').classList.remove('hidden')" 
+                class="group relative w-full lg:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-indigo-200 transition-all active:scale-95 overflow-hidden">
+            <span class="relative z-10 flex items-center justify-center">
+                <i class="fas fa-plus-circle mr-2 group-hover:rotate-90 transition-transform duration-300"></i>
+                Create Purchase Order
+            </span>
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="stat-card-gradient bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative group">
+            <div class="relative">
+                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Lifetime Value</p>
+                <h2 class="text-3xl font-black text-slate-900">₹{{ "{:,.2f}".format(stats.lifetime_spend or 0) }}</h2>
+                <div class="mt-4 flex items-center text-emerald-600 font-bold text-xs">
+                    <span class="bg-emerald-50 px-2 py-1 rounded-md">Total Paid Invoices</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card-gradient bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative group">
+            <div class="relative">
+                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">In-Transit</p>
+                <h2 class="text-3xl font-black text-indigo-600">{{ stats.current_pending or 0 }}</h2>
+                <div class="mt-4 flex items-center text-indigo-600 font-bold text-xs">
+                    <span class="bg-indigo-50 px-2 py-1 rounded-md">Pending Shipments</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card-gradient bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative group">
+            <div class="relative">
+                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Delivery Score</p>
+                <h2 class="text-3xl font-black text-slate-900">
+                    {{ ((stats.lifetime_received / stats.lifetime_orders)*100)|round if stats.lifetime_orders > 0 else 0 }}%
+                </h2>
+                <div class="mt-4 flex items-center text-amber-600 font-bold text-xs">
+                    <span class="bg-amber-50 px-2 py-1 rounded-md">Reliability Index</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card-gradient bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative group">
+            <div class="relative">
+                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Inventory Reach</p>
+                <h2 class="text-3xl font-black text-slate-900">{{ history|length }}</h2>
+                <div class="mt-4 flex items-center text-slate-500 font-bold text-xs">
+                    <span class="bg-slate-100 px-2 py-1 rounded-md">Unique Medicines</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm glass-card">
+        <div class="px-8 py-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <h3 class="text-xl font-bold text-slate-800">Procurement History</h3>
+                <p class="text-sm text-slate-500 font-medium">Detailed log of orders from 2025 - 2026</p>
+            </div>
+        </div>
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-[0.1em]">
+                    <tr>
+                        <th class="px-8 py-5">Medicine Info</th>
+                        <th class="px-8 py-5">Unit Price</th>
+                        <th class="px-8 py-5">Shipment Status</th>
+                        <th class="px-8 py-5">Order Timeline</th>
+                        <th class="px-8 py-5 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for row in history %}
+                    <tr class="hover:bg-indigo-50/30 transition-colors group">
+                        <td class="px-8 py-6">
+                            <div class="font-bold text-slate-900">{{ row.medicine_name }}</div>
+                            <div class="text-xs font-semibold text-slate-400 mt-0.5">{{ row.manufacturer or 'N/A' }}</div>
+                        </td>
+                        <td class="px-8 py-6">
+                            <span class="font-mono text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">₹{{ row.medicine_price }}</span>
+                        </td>
+                        <td class="px-8 py-6">
+                            {% if row.received_count > 0 %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-wide">
+                                Received
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-wide">
+                                In Transit
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-8 py-6">
+                            <div class="text-sm font-bold text-slate-600">{{ row.order_date.strftime('%d %b %Y') if row.order_date }}</div>
+                        </td>
+                        <td class="px-8 py-6 text-right">
+                            {% if row.received_count == 0 %}
+                            <a href="{{ url_for('receive_purchase', purchase_id=row.id) }}" 
+                               class="inline-flex items-center bg-indigo-600 text-white px-5 py-2 rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all">
+                               Confirm Receipt
+                            </a>
+                            {% else %}
+                            <div class="inline-flex items-center text-emerald-500 font-bold text-sm">
+                                <i class="fas fa-check-circle mr-2"></i> Verified
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="addOrderModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden transform transition-all border border-white/20">
+        <div class="bg-indigo-600 p-10 text-white">
+            <h3 class="text-3xl font-black tracking-tight">New Order</h3>
+            <p class="text-indigo-100 text-sm font-medium mt-2">Restocking inventory from {{ supplier.name }}</p>
+        </div>
+        
+        <form method="POST" action="{{ url_for('add_supplier_purchase') }}" class="p-10 space-y-6">
+            <input type="hidden" name="supplier_id" value="{{ supplier.id }}">
+            
+            <div class="space-y-2">
+                <label class="block text-[11px] font-black text-slate-400 uppercase ml-1">Stock Item</label>
+                <select name="medicine_name" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-700 font-semibold outline-none focus:border-indigo-500">
+                    <option value="" disabled selected>Select from inventory...</option>
+                    {% for p in products %}
+                    <option value="{{ p.name }}">{{ p.name }} (Available: {{ p.stock_quantity }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div class="space-y-2">
+    <label class="block text-[11px] font-black text-slate-400 uppercase ml-1">Quantity</label>
+    <input type="number" name="quantity" placeholder="Quantity" required 
+      class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-700 font-semibold outline-none focus:border-indigo-500 transition-colors">
+  </div>
+
+  <div class="space-y-2">
+    <label class="block text-[11px] font-black text-slate-400 uppercase ml-1">Expected Delivery</label>
+    <input type="date" name="expected_delivery_date" required 
+      class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-700 font-semibold outline-none focus:border-indigo-500 transition-colors">
+  </div>
+</div>
+
+            <div class="flex flex-col gap-4 pt-6">
+    <button type="submit" 
+        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-200 transition-all active:scale-[0.98]">
+        Place Purchase Order
+    </button>
+
+    <button type="button" 
+        onclick="document.getElementById('addOrderModal').classList.add('hidden')" 
+        class="w-full bg-rose-50 text-rose-600 font-bold py-4 rounded-2xl hover:bg-rose-100 hover:text-rose-700 transition-colors">
+        Cancel
+    </button>
+</div>
+        </form>
+    </div>
+</div>
+{% endblock %}

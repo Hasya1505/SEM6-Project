@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}Category Overview - MediStore Pro{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="page-title">Medicine Category Sales Overview</h1>
+    <p class="page-subtitle">Visual analysis and inventory grouping by medicine category.</p>
+</div>
+
+<div class="card section-spacing">
+    <div class="card-body">
+        <h2 class="section-header mb-4"><i class="fas fa-chart-pie mr-2 text-primary"></i>Sales Distribution by Category</h2>
+        <div class="h-[400px]">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="space-y-8">
+    {% for category, medicines in grouped_medicines.items() %}
+    <div class="card">
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="section-header text-primary uppercase tracking-wide">
+                <i class="fas fa-tags mr-2"></i>{{ category }}
+            </h2>
+            <span class="badge badge-info">{{ medicines|length }} Products</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Medicine Name</th>
+                        <th>Manufacturer</th>
+                        <th>Shelf</th>
+                        <th>Stock</th>
+                        <th>Total Sold</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for med in medicines %}
+                    <tr>
+                        <td class="font-medium">{{ med.name }}</td>
+                        <td>{{ med.manufacturer }}</td>
+                        <td><span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded">{{ med.shelf_location }}</span></td>
+                        <td>
+                            <span class="{% if med.stock_quantity < 20 %}text-danger font-bold{% endif %}">
+                                {{ med.stock_quantity }}
+                            </span>
+                        </td>
+                        <td class="font-semibold text-success">{{ med.units_sold }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+        
+        // Data prepared by backend
+        const labels = [{% for item in category_summary %}"{{ item.category }}",{% endfor %}];
+        const salesData = [{% for item in category_summary %}{{ item.total_units_sold }},{% endfor %}];
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Units Sold',
+                    data: salesData,
+                    backgroundColor: '#0066FF',
+                    borderRadius: 5,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { display: false } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

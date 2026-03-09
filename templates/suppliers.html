@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Supplier Network - MediStore Pro{% endblock %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
+    /* Applying font without removing existing utility class behaviors */
+    .supplier-page-font, 
+    .supplier-page-font input, 
+    .supplier-page-font button, 
+    .supplier-page-font h1, 
+    .supplier-page-font h3, 
+    .supplier-page-font p { 
+        font-family: 'Inter', sans-serif !important; 
+    }
+</style>
+
+<div class="supplier-page-font max-w-7xl mx-auto space-y-6 py-6">
+    <div class="flex justify-between items-end bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+        <div>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Supplier Network</h1>
+            <p class="text-slate-500 font-medium">Manage your pharmaceutical supply chain partners.</p>
+        </div>
+        {% if session.get('role') == 'owner' %}
+        <button onclick="document.getElementById('addSupplierModal').classList.remove('hidden')" 
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-semibold transition-all flex items-center gap-2">
+            <i class="fas fa-plus-circle"></i> Add New Supplier
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for supplier in suppliers %}
+        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg transition-all group">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                        {{ supplier.name[0] }}
+                    </div>
+                    <span class="text-[10px] font-bold uppercase px-2 py-1 bg-slate-100 text-slate-600 rounded">
+                        GST: {{ supplier.gstin or 'N/A' }}
+                    </span>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900">{{ supplier.name }}</h3>
+                <p class="text-slate-500 text-sm mb-4">{{ supplier.company_name }}</p>
+                <div class="space-y-2 text-sm text-slate-600">
+                    <div><i class="fas fa-phone-alt w-5 text-indigo-400"></i> {{ supplier.phone }}</div>
+                    <div><i class="fas fa-envelope w-5 text-indigo-400"></i> {{ supplier.email or 'No Email' }}</div>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-6 py-4 flex gap-2">
+                <a href="{{ url_for('supplier_purchases', supplier_id=supplier.id) }}" 
+                   class="flex-1 text-center bg-white border border-slate-200 text-slate-700 py-2 rounded-lg text-sm font-bold hover:bg-indigo-600 hover:text-white transition-all">
+                   View Intelligence & History
+                </a>
+                <button onclick="editSupplier('{{ supplier.id }}', '{{ supplier.name }}', '{{ supplier.company_name }}', '{{ supplier.phone }}', '{{ supplier.gstin }}', '{{ supplier.address }}')" 
+                        class="px-4 py-2 bg-white border border-slate-200 text-slate-500 rounded-lg hover:text-amber-600 hover:border-amber-200 transition-all">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div id="addSupplierModal" class="supplier-page-font hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div class="bg-indigo-600 p-6 text-white flex justify-between items-center">
+            <div>
+                <h3 class="text-xl font-bold">Register New Supplier</h3>
+                <p class="text-indigo-100 text-sm">Add a new logistics partner to your network</p>
+            </div>
+            <button onclick="document.getElementById('addSupplierModal').classList.add('hidden')" class="text-white/80 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <form method="POST" action="{{ url_for('add_supplier') }}" class="p-8 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Contact Person *</label>
+                    <input type="text" name="name" required placeholder="e.g. Rajesh Mehta"
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Company Name *</label>
+                    <input type="text" name="company_name" required placeholder="e.g. Apex Pharma Distributors"
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Phone Number *</label>
+                    <input type="tel" name="phone" required pattern="[0-9]{10}" placeholder="10-digit mobile"
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Email Address</label>
+                    <input type="email" name="email" placeholder="contact@company.com"
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">GSTIN (India)</label>
+                    <input type="text" name="gstin" placeholder="24AAAAA0000A1Z5"
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 font-mono">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Office Address</label>
+                    <input type="text" name="address" placeholder="GIDC, Ahmedabad, Gujarat"
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <div class="flex gap-4 pt-4">
+                <button type="submit" class="flex-1 bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">
+                    Register Supplier
+                </button>
+                <button type="button" onclick="document.getElementById('addSupplierModal').classList.add('hidden')" 
+                        class="flex-1 bg-slate-100 text-slate-600 font-bold py-4 rounded-xl hover:bg-slate-200 transition-all">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="editSupplierModal" class="supplier-page-font hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div class="bg-amber-500 p-6 text-white flex justify-between items-center">
+            <h3 class="text-xl font-bold">Edit Supplier Details</h3>
+            <button onclick="document.getElementById('editSupplierModal').classList.add('hidden')" class="text-white/80 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <form method="POST" id="editSupplierForm" action="" class="p-8 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Contact Person</label>
+                    <input type="text" name="name" id="edit_name" required 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Company Name</label>
+                    <input type="text" name="company_name" id="edit_company_name" required 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Phone</label>
+                    <input type="tel" name="phone" id="edit_phone" required 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">GSTIN</label>
+                    <input type="text" name="gstin" id="edit_gstin" 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-amber-500 font-mono">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Address</label>
+                    <input type="text" name="address" id="edit_address" 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <button type="submit" class="flex-1 bg-amber-500 text-white font-bold py-4 rounded-xl hover:bg-amber-600 shadow-lg transition-all">Save Changes</button>
+                <button type="button" onclick="document.getElementById('editSupplierModal').classList.add('hidden')" 
+                        class="flex-1 bg-slate-100 text-slate-600 font-bold py-4 rounded-xl hover:bg-slate-200 transition-all">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+/**
+ * editSupplier
+ * Populates and displays the Amber-themed Edit Modal
+ */
+function editSupplier(id, name, company, phone, gstin, address) {
+    // Fill the form fields with existing data from the card
+    document.getElementById('edit_name').value = name;
+    document.getElementById('edit_company_name').value = company;
+    document.getElementById('edit_phone').value = phone;
+    document.getElementById('edit_gstin').value = gstin;
+    document.getElementById('edit_address').value = address;
+    
+    // Dynamically set the form action to include the specific supplier ID for the Flask route
+    document.getElementById('editSupplierForm').action = "/edit_supplier/" + id;
+    
+    // Reveal the hidden modal
+    document.getElementById('editSupplierModal').classList.remove('hidden');
+}
+</script>
+
+{% endblock %}

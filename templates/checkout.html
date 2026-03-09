@@ -1,0 +1,271 @@
+{% extends "base.html" %} 
+{% block title %}Checkout - {{ settings.get('store_name', 'MediStore Pro') }}{% endblock %} 
+
+{% block content %}
+<style>
+    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+    
+    * { 
+        font-family: "Inter", sans-serif; 
+    }
+
+    /* Soft, attractive active state */
+    .border-active {
+        border-color: #4f46e5 !important; /* Indigo 600 */
+        background-color: #f5f3ff !important; /* Indigo 50 */
+        box-shadow: 0 0 0 1px #4f46e5;
+    }
+    .border-active i, .border-active span {
+        color: #4f46e5 !important;
+    }
+    .border-active .check-icon {
+        display: block !important;
+        color: #4f46e5 !important;
+    }
+    
+    .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
+    }
+</style>
+
+<div class="mb-8">
+    <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Finalize Transaction</h1>
+    <p class="text-slate-500 text-sm font-medium">Verify customer details and choose a payment method to complete the order.</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div class="lg:col-span-7 space-y-6">
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800 text-sm uppercase tracking-wider">Order Summary</h3>
+                <span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold uppercase">{{ cart|length }} Items</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-slate-400 bg-white border-b border-slate-100">
+                            <th class="px-6 py-4 font-semibold text-left uppercase text-[10px] tracking-widest">Medicine Description</th>
+                            <th class="px-6 py-4 font-semibold text-center uppercase text-[10px] tracking-widest">Qty</th>
+                            <th class="px-6 py-4 font-semibold text-right uppercase text-[10px] tracking-widest">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        {% for item in cart %}
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                            <td class="px-6 py-4">
+                                <p class="font-bold text-slate-800 uppercase text-xs">{{ item.name }}</p>
+                                <p class="text-[10px] text-slate-400 font-medium">Unit Price: ₹{{ item.price }}</p>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg font-bold text-xs">{{ item.quantity }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-right font-bold text-indigo-600 text-xs">₹{{ "%.2f"|format((item.price * item.quantity)|float) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h3 class="font-bold text-slate-800 mb-5 flex items-center gap-2 uppercase text-xs tracking-widest">
+                <i class="fas fa-wallet text-indigo-500"></i> Payment Method
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="paymentOptions">
+                <label class="relative flex flex-col items-center justify-center p-6 border-2 border-slate-100 rounded-xl cursor-pointer transition-all hover:border-indigo-200" id="label-cash">
+                    <input type="radio" name="payment_mode" value="cash" class="hidden" checked onclick="updatePaymentUI('cash')">
+                    <i class="fas fa-money-bill-wave text-2xl mb-2 text-slate-400"></i>
+                    <span class="font-bold text-xs uppercase text-slate-600">Cash</span>
+                    <div class="check-icon absolute top-3 right-3 hidden"><i class="fas fa-check-circle"></i></div>
+                </label>
+
+                <label class="relative flex flex-col items-center justify-center p-6 border-2 border-slate-100 rounded-xl cursor-pointer transition-all hover:border-indigo-200" id="label-qr">
+                    <input type="radio" name="payment_mode" value="qr" class="hidden" onclick="updatePaymentUI('qr')">
+                    <i class="fas fa-qrcode text-2xl mb-2 text-slate-400"></i>
+                    <span class="font-bold text-xs uppercase text-slate-600">UPI / QR</span>
+                    <div class="check-icon absolute top-3 right-3 hidden"><i class="fas fa-check-circle"></i></div>
+                </label>
+
+                <label class="relative flex flex-col items-center justify-center p-6 border-2 border-slate-100 rounded-xl cursor-pointer transition-all hover:border-indigo-200" id="label-card">
+                    <input type="radio" name="payment_mode" value="card" class="hidden" onclick="updatePaymentUI('card')">
+                    <i class="fas fa-credit-card text-2xl mb-2 text-slate-400"></i>
+                    <span class="font-bold text-xs uppercase text-slate-600">Card</span>
+                    <div class="check-icon absolute top-3 right-3 hidden"><i class="fas fa-check-circle"></i></div>
+                </label>
+            </div>
+
+            <div id="cardDetailsInfo" class="mt-6 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 hidden">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-info-circle text-indigo-600 mt-1"></i>
+                    <div>
+                        <p class="text-xs font-bold uppercase text-indigo-900">Card Payment Processing</p>
+                        <p class="text-[11px] text-indigo-700/80 font-medium">Please use the card terminal. Ensure the transaction is successful before clicking confirm.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="qrInfo" class="mt-6 p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 hidden">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-white rounded-lg border border-emerald-100 shadow-sm text-emerald-600">
+                        <i class="fas fa-qrcode text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold uppercase text-emerald-900">Dynamic QR Ready</p>
+                        <p class="text-[11px] text-emerald-700/80 font-medium">A unique UPI QR code for ₹{{ "%.2f"|format(total_amount|float) }} will be generated on the invoice.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="lg:col-span-5">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 sticky top-6">
+            <form method="POST" action="{{ url_for('checkout') }}" id="checkoutForm">
+                <h3 class="font-bold text-slate-800 mb-6 text-sm uppercase tracking-widest border-b border-slate-100 pb-4">Customer Information</h3>
+                
+                <div class="space-y-5 mb-8">
+                    <div class="relative">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Phone Number</label>
+                        <div class="relative">
+                            <i class="fas fa-phone absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
+                            <input type="tel" name="customer_phone" id="customer_phone" 
+                                   value="{{ customer_info.phone if customer_info else '' }}"
+                                   oninput="searchCustomers(); validatePhoneNumber();"
+                                   placeholder="Enter 10 digit number"
+                                   class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-3 text-xs font-bold focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all">
+                        </div>
+                        <div id="phoneSuggestions" class="absolute z-20 w-full bg-white border border-slate-200 shadow-2xl rounded-xl mt-1 overflow-hidden hidden"></div>
+                        <small id="phoneError" class="text-red-500 text-[9px] font-bold uppercase mt-1 hidden">Invalid phone number length</small>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Customer Name <span id="nameRequired" class="text-red-400 hidden">*</span></label>
+                        <input type="text" name="customer_name" id="customer_name" 
+                               value="{{ customer_info.name if customer_info else 'Walk-in Customer' }}"
+                               onfocus="handleNameFocus()"
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold focus:border-indigo-500 outline-none transition-all uppercase">
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Email Address</label>
+                            <input type="email" name="customer_email" id="customer_email" value="{{ customer_info.email if customer_info else '' }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold focus:border-indigo-500 outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Billing Address</label>
+                            <input type="text" name="customer_address" id="customer_address" value="{{ customer_info.address if customer_info else '' }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold focus:border-indigo-500 outline-none transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                <input type="hidden" name="customer_id" id="customer_id" value="{{ customer_info.id if customer_info else '' }}">
+                <div id="customerStatus" class="mb-6"></div>
+
+                <div class="bg-indigo-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200 space-y-3 mb-6">
+                    <div class="flex justify-between text-indigo-100 text-[11px] font-bold uppercase tracking-wider">
+                        <span>Subtotal</span>
+                        <span>₹{{ "%.2f"|format(subtotal|float) }}</span>
+                    </div>
+                    <div class="flex justify-between text-indigo-100 text-[11px] font-bold uppercase tracking-wider">
+                        <span>Tax (GST 12%)</span>
+                        <span>₹{{ "%.2f"|format(gst_amount|float) }}</span>
+                    </div>
+                    <div class="pt-3 border-t border-indigo-400/50 flex justify-between items-end">
+                        <span class="text-xs font-bold uppercase tracking-widest text-indigo-200">Total Amount Due</span>
+                        <span class="text-2xl font-black">₹{{ "%.2f"|format(total_amount|float) }}</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] uppercase text-xs tracking-widest mb-4">
+                    Confirm & Print Receipt
+                </button>
+
+                <a href="{{ url_for('billing') }}" class="w-full flex items-center justify-center gap-2 py-3 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-indigo-600 transition-all">
+                    <i class="fas fa-arrow-left"></i> Return to Billing
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updatePaymentUI(mode) {
+        const labels = ['cash', 'qr', 'card'];
+        labels.forEach(l => {
+            document.getElementById(`label-${l}`).classList.remove('border-active');
+        });
+        document.getElementById(`label-${mode}`).classList.add('border-active');
+        document.getElementById('cardDetailsInfo').classList.toggle('hidden', mode !== 'card');
+        document.getElementById('qrInfo').classList.toggle('hidden', mode !== 'qr');
+    }
+
+    let searchTimeout;
+    let nameManuallyChanged = false;
+
+    function validatePhoneNumber() {
+        const phone = document.getElementById("customer_phone").value;
+        const phoneError = document.getElementById("phoneError");
+        const nameRequired = document.getElementById("nameRequired");
+        const nameField = document.getElementById("customer_name");
+
+        if (phone.length > 0) {
+            nameRequired.classList.remove("hidden");
+            if (nameField.value === "Walk-in Customer") { nameField.value = ""; }
+        } else {
+            nameRequired.classList.add("hidden");
+            if ((nameField.value === "" || nameField.value.trim() === "") && !nameManuallyChanged) {
+                nameField.value = "Walk-in Customer";
+            }
+        }
+        phoneError.classList.toggle("hidden", phone.length === 0 || phone.length === 10);
+    }
+
+    function handleNameFocus() {
+        const phone = document.getElementById("customer_phone").value;
+        const nameField = document.getElementById("customer_name");
+        if (phone.length > 0 && nameField.value === "Walk-in Customer") { nameField.value = ""; }
+    }
+
+    function searchCustomers() {
+        const phone = document.getElementById("customer_phone").value;
+        const suggestionsDiv = document.getElementById("phoneSuggestions");
+        clearTimeout(searchTimeout);
+        if (phone.length < 4) { suggestionsDiv.classList.add("hidden"); return; }
+
+        searchTimeout = setTimeout(() => {
+            fetch(`/api/search_customers?phone=${phone}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.customers && data.customers.length > 0) {
+                        let html = '';
+                        data.customers.forEach(c => {
+                            html += `<button type="button" onclick="selectCustomer('${c.phone}', '${c.name}', '${c.email || ""}', '${c.address || ""}', ${c.id})" class="w-full text-left px-4 py-3 hover:bg-indigo-50 font-bold text-[10px] uppercase border-b border-slate-50 last:border-0 transition-colors">
+                                <span class="text-indigo-600 block">${c.name}</span>
+                                <span class="text-slate-400 text-[9px]">${c.phone}</span>
+                            </button>`;
+                        });
+                        suggestionsDiv.innerHTML = html;
+                        suggestionsDiv.classList.remove("hidden");
+                    }
+                });
+        }, 300);
+    }
+
+    function selectCustomer(phone, name, email, address, id) {
+        document.getElementById("customer_phone").value = phone;
+        document.getElementById("customer_name").value = name;
+        document.getElementById("customer_email").value = email;
+        document.getElementById("customer_address").value = address;
+        document.getElementById("customer_id").value = id;
+        document.getElementById("phoneSuggestions").classList.add("hidden");
+        document.getElementById("customerStatus").innerHTML = '<div class="bg-emerald-50 text-emerald-700 border border-emerald-100 p-2 rounded-lg text-[9px] font-black uppercase tracking-widest mt-2 flex items-center gap-2"><i class="fas fa-check-circle"></i> Verified Member Profile</div>';
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        updatePaymentUI('cash');
+    });
+</script>
+{% endblock %}

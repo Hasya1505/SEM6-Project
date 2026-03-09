@@ -1,0 +1,371 @@
+{% extends "base.html" %} {% block title %}Dashboard - MediStore Pro{% endblock
+%} {% block content %}
+
+<!-- Header -->
+<div class="section-spacing">
+  <h1 class="page-title">Dashboard</h1>
+  <p class="page-subtitle">Business overview at a glance</p>
+</div>
+
+<!-- Key Metrics - 2 Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 section-spacing">
+  <div class="stat-card">
+    <div class="flex items-center justify-between mb-3">
+      <span class="stat-label">Total Revenue</span>
+      <div class="stat-icon bg-green-50">
+        <i class="fas fa-rupee-sign text-green-600 text-sm"></i>
+      </div>
+    </div>
+    <div class="stat-value">
+      {{ settings.get('currency_symbol', '₹') }}{{
+      "%.2f"|format(total_revenue|float) }}
+    </div>
+    <div class="stat-change text-green-600">
+      Today: {{ settings.get('currency_symbol', '₹') }}{{
+      "%.2f"|format(today_sales|float) }}
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="flex items-center justify-between mb-3">
+      <span class="stat-label">Low Stock Alert</span>
+      <div class="stat-icon bg-orange-50">
+        <i class="fas fa-exclamation-triangle text-orange-600 text-sm"></i>
+      </div>
+    </div>
+    <div class="stat-value">{{ low_stock_count }}</div>
+    <a
+      href="{{ url_for('low_stock') }}"
+      class="stat-change text-orange-600 inline-block hover:underline"
+    >
+      View Items →
+    </a>
+  </div>
+</div>
+
+<!-- Financial Analytics -->
+<div class="section-spacing">
+  <h2 class="section-header mb-3">Financial Analytics</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <!-- Net Profit -->
+    <!-- <div class="stat-card">
+      <div class="stat-label">Net Profit</div>
+      <div
+        class="stat-value {% if gross_profit >= 0 %}text-green-600{% else %}text-red-600{% endif %}"
+      >
+        {{ settings.get('currency_symbol', '₹') }}{{
+        "%.2f"|format(gross_profit|float) }}
+      </div>
+      <div class="text-small mt-2">
+        Margin: {{ "%.1f"|format(profit_margin) }}%
+      </div>
+    </div> -->
+
+    <!-- Inventory Value -->
+    <div class="stat-card">
+      <div class="stat-label">Inventory Value</div>
+      <div class="stat-value">
+        {{ settings.get('currency_symbol', '₹') }}{{
+        "%.2f"|format(inventory_value|float) }}
+      </div>
+      <div class="text-small mt-2">Current stock</div>
+    </div>
+
+    <!-- Today's Profit -->
+    <div class="stat-card">
+      <div class="stat-label">Today's Profit</div>
+      <div
+        class="stat-value {% if today_profit >= 0 %}text-green-600{% else %}text-red-600{% endif %}"
+      >
+        {{ settings.get('currency_symbol', '₹') }}{{
+        "%.2f"|format(today_profit|float) }}
+      </div>
+      <div class="text-small mt-2">Daily performance</div>
+    </div>
+  </div>
+</div>
+
+<!-- Pending Supplier Orders -->
+{% if pending_orders_count > 0 %}
+<div class="card section-spacing">
+  <div
+    class="card-body border-b border-gray-200 flex items-center justify-between"
+  >
+    <h3 class="section-header">Pending Supplier Orders</h3>
+    <span class="badge badge-warning">{{ pending_orders_count }}</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full data-table">
+      <thead>
+        <tr>
+          <th class="text-left py-3 px-4">Order #</th>
+          <th class="text-left py-3 px-4">Product</th>
+          <th class="text-left py-3 px-4">Supplier</th>
+          <th class="text-left py-3 px-4">Qty</th>
+          <th class="text-left py-3 px-4">Amount</th>
+          <th class="text-left py-3 px-4">Expected</th>
+          <th class="text-left py-3 px-4">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in pending_orders %}
+        <tr>
+          <td class="px-4 py-3 font-medium text-primary">
+            #{{ order.purchase_id }}
+          </td>
+          <td class="px-4 py-3">{{ order.medicine_name }}</td>
+          <td class="px-4 py-3">{{ order.supplier_name }}</td>
+          <td class="px-4 py-3">{{ order.quantity }}</td>
+          <td class="px-4 py-3 font-semibold">
+            {{ settings.get('currency_symbol', '₹') }}{{
+            "%.2f"|format(order.total_amount|float) }}
+          </td>
+          <td class="px-4 py-3">
+            {% if order.expected_delivery_date %}{{
+            order.expected_delivery_date.strftime('%d %b') }}{% else %}Not set{%
+            endif %}
+          </td>
+          <td class="px-4 py-3">
+            <a
+              href="{{ url_for('supplier_purchases', supplier_id=order.supplier_id) }}"
+              class="text-primary hover:text-blue-700 font-medium"
+              >View →</a
+            >
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Charts Section -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 section-spacing">
+  <!-- Sales Trend Chart -->
+  <div class="card">
+    <div class="card-body border-b border-gray-200">
+      <h3 class="section-header">Sales Trend</h3>
+      <p class="text-small">Last 7 days</p>
+    </div>
+    <div class="card-body">
+      <div class="h-52">
+        <canvas id="salesChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly Sales Chart -->
+  <div class="card">
+    <div class="card-body border-b border-gray-200">
+      <h3 class="section-header">Monthly Revenue</h3>
+      <p class="text-small">Last 12 months</p>
+    </div>
+    <div class="card-body">
+      <div class="h-52">
+        <canvas id="monthlySalesChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Company Stock & Top Medicines -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 section-spacing">
+  <div class="card">
+    <div class="card-body border-b border-gray-200">
+      <h3 class="section-header">Stock by Company</h3>
+      <p class="text-small">Top manufacturers</p>
+    </div>
+    <div class="card-body">
+      <div class="h-64">
+        <canvas id="companyStockChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body border-b border-gray-200">
+      <h3 class="section-header">Top Selling Medicines</h3>
+      <p class="text-small">Revenue leaders</p>
+    </div>
+    <div class="card-body">
+      <div class="h-64">
+        <canvas id="topMedicinesChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Bills -->
+<div class="card">
+  <div class="card-body border-b border-gray-200">
+    <h3 class="section-header">Recent Bills</h3>
+    <p class="text-small">Latest transactions</p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full data-table">
+      <thead>
+        <tr>
+          <th class="text-left py-3 px-4">Bill #</th>
+          <th class="text-left py-3 px-4">Customer</th>
+          <th class="text-left py-3 px-4">Date</th>
+          <th class="text-right py-3 px-4">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bill in recent_bills %}
+        <tr>
+          <td class="px-4 py-3 font-medium text-primary">#{{ bill.id }}</td>
+          <td class="px-4 py-3">{{ bill.customer_name }}</td>
+          <td class="px-4 py-3">
+            {{ bill.bill_date.strftime('%d %b, %I:%M %p') }}
+          </td>
+          <td class="px-4 py-3 font-semibold text-right">
+            ₹{{ "%.2f"|format(bill.total_amount|float) }}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" class="px-4 py-8 text-center text-gray-500 text-sm">
+            No recent bills
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %} {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Sales Chart
+  const salesData = {{ sales_chart|tojson|safe }};
+  const labels = salesData.map(item => {
+      const date = new Date(item.date);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  });
+  const data = salesData.map(item => item.daily_sales);
+
+  const ctx = document.getElementById('salesChart');
+  new Chart(ctx, {
+      type: 'line',
+      data: {
+          labels: labels,
+          datasets: [{
+              label: 'Daily Sales (₹)',
+              data: data,
+              borderColor: '#0066FF',
+              backgroundColor: 'rgba(0, 102, 255, 0.1)',
+              tension: 0.4,
+              fill: true,
+              borderWidth: 2
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+            x: { grid: { display: false } }
+          }
+      }
+  });
+
+  // Monthly Sales Chart
+  const monthlySalesData = {{ monthly_sales|tojson|safe }};
+  const monthLabels = monthlySalesData.map(item => {
+      const [year, month] = item.month.split('-');
+      const date = new Date(year, month - 1);
+      return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+  });
+  const monthData = monthlySalesData.map(item => item.monthly_sales);
+
+  const monthCtx = document.getElementById('monthlySalesChart');
+  new Chart(monthCtx, {
+      type: 'bar',
+      data: {
+          labels: monthLabels,
+          datasets: [{
+              label: 'Monthly Sales (₹)',
+              data: monthData,
+              backgroundColor: '#0066FF',
+              borderRadius: 4
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+            x: { grid: { display: false } }
+          }
+      }
+  });
+
+  // Company Stock Chart
+  const companyStockData = {{ company_stock|tojson|safe }};
+  const companyLabels = companyStockData.map(item => item.manufacturer);
+  const stockData = companyStockData.map(item => item.total_stock);
+  const stockColors = [
+      '#0066FF', '#00A65A', '#F39C12', '#DD4B39', '#8b5cf6',
+      '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1'
+  ];
+
+  const companyCtx = document.getElementById('companyStockChart');
+  new Chart(companyCtx, {
+      type: 'doughnut',
+      data: {
+          labels: companyLabels,
+          datasets: [{
+              label: 'Stock Quantity',
+              data: stockData,
+              backgroundColor: stockColors,
+              borderWidth: 2,
+              borderColor: '#fff'
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+              legend: {
+                  position: 'bottom',
+                  labels: { padding: 12, font: { size: 11 } }
+              }
+          }
+      }
+  });
+
+  // Top Medicines Chart
+  const topMedicinesData = {{ top_selling_medicines|tojson|safe }};
+  const medicineLabels = topMedicinesData.map(item => item.medicine_name);
+  const medicineRevenue = topMedicinesData.map(item => item.revenue);
+
+  const medicineCtx = document.getElementById('topMedicinesChart');
+  new Chart(medicineCtx, {
+      type: 'bar',
+      data: {
+          labels: medicineLabels,
+          datasets: [{
+              label: 'Revenue (₹)',
+              data: medicineRevenue,
+              backgroundColor: '#00A65A',
+              borderRadius: 4
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+            y: { grid: { display: false } }
+          }
+      }
+  });
+</script>
+{% endblock %}
